@@ -1,6 +1,9 @@
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Duration;
 
@@ -15,76 +18,78 @@ public class TimeFormatterTest {
         underTest = new TimeFormatter();
     }
 
-    @AfterEach
-    public void tearDown() {
-    }
-
-    @Test
-    public void testGetHours() {
+    @ParameterizedTest
+    @DisplayName("getHours() should get hours part of time")
+    @CsvSource({"10,0", "320,5", "610,10", "1390,23"})
+    public void testGetHours(Long minutes, Long expected) {
         // Given
-        Duration time = Duration.ofMinutes(320);
+        Duration time = Duration.ofMinutes(minutes);
         // When
         underTest.setTime(time);
         // Then
-        assertEquals(5, underTest.getHours());
+        assertEquals(expected, underTest.getHours());
     }
 
-    @Test
-    public void testGetMinutes() {
-        // Given
-        Duration time = Duration.ofSeconds(540);
-        // When
+    @ParameterizedTest
+    @DisplayName("getMinutes() should get minutes part of time")
+    @CsvSource({"59,0", "610,10", "3599,59"})
+    public void testGetMinutes(Long seconds, Long expected) {
+        Duration time = Duration.ofSeconds(seconds);
         underTest.setTime(time);
-        // Then
-        assertEquals(9, underTest.getMinutes());
+        assertEquals(expected, underTest.getMinutes());
     }
 
-    @Test
-    public void testGetSeconds() {
-        // Given
-        Duration time = Duration.ofSeconds(20);
-        // When
+    @ParameterizedTest
+    @DisplayName("getSeconds() should get seconds part of time")
+    @CsvSource({"1,1", "20,20", "59,59"})
+    public void testGetSeconds(Long seconds, Long expected) {
+        Duration time = Duration.ofSeconds(seconds);
         underTest.setTime(time);
-        // Then
-        assertEquals(20, underTest.getSeconds());
+        assertEquals(expected, underTest.getSeconds());
     }
 
-    @Test
-    public void testTimeToStringWithMinutes() {
-        // Given
-        Duration time = Duration.ofMinutes(45).plus(Duration.ofSeconds(10));
-        // When
+    @ParameterizedTest
+    @DisplayName("timeToString() should convert time to a two-part string if time is less than an hour")
+    @CsvSource({"0,1,00:01", "45,10,45:10", "59,59,59:59"})
+    public void testTimeToStringWithMinutes(Long minutes, Long seconds, String expected) {
+        Duration time = Duration.ofMinutes(minutes).plus(Duration.ofSeconds(seconds));
         underTest.setTime(time);
-        // Then
-        assertEquals("45:10", underTest.timeToString());
+        assertEquals(expected, underTest.timeToString());
     }
 
-    @Test
-    public void testTimeToStringWithHours() {
-        // Given
-        Duration time = Duration.ofHours(2).plus(Duration.ofMinutes(30).plus(Duration.ofSeconds(40)));
-        // When
+    @ParameterizedTest
+    @DisplayName("timeToString() should convert time to a three-part string if time is more than an hour")
+    @CsvSource({"1,0,1,01:00:01", "16,45,10,16:45:10", "23,59,59,23:59:59"})
+    public void testTimeToStringWithHours(Long hours, Long minutes, Long seconds, String expected) {
+        Duration time = Duration.ofHours(hours).plus(Duration.ofMinutes(minutes).plus(Duration.ofSeconds(seconds)));
         underTest.setTime(time);
-        // Then
-        assertEquals("02:30:40", underTest.timeToString());
+        assertEquals(expected, underTest.timeToString());
     }
 
     @Test
-    public void testSetTimeShouldThrowIllegalArgumentExceptionWhenTheDurationIsNegative() {
-        Duration time = Duration.ofHours(-10);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            underTest.setTime(time);
-        });
-        assertEquals("Negative duration", exception.getMessage());
+    @DisplayName("setTime(Duration) should throw IllegalArgumentException if time is zero")
+    public void testSetTimeWithZeroDuration() {
+        Duration time = Duration.ofSeconds(0);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> underTest.setTime(time));
+        assertEquals("Zero duration was given", exception.getMessage());
     }
 
-    @Test
-    public void testSetTimeShouldThrowIllegalArgumentExceptionWhenTheDurationIsLongerThanADay() {
-        Duration time = Duration.ofDays(1);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            underTest.setTime(time);
-        });
-        assertEquals("Duration is longer than a day", exception.getMessage());
+    @ParameterizedTest
+    @DisplayName("setTime(Duration) should throw IllegalArgumentException if time is negative")
+    @ValueSource(longs = {-100000, -6300, -1})
+    public void testSetTimeWithNegativeDuration(Long negativeTime) {
+        Duration time = Duration.ofHours(negativeTime);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> underTest.setTime(time));
+        assertEquals("Negative duration was given", exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @DisplayName("setTime(Duration) should throw IllegalArgumentException if time is longer than a day")
+    @ValueSource(longs = {1, 235, 100000})
+    public void testSetTimeWithLongerThanADayDuration(Long tooLongTime) {
+        Duration time = Duration.ofDays(tooLongTime);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> underTest.setTime(time));
+        assertEquals("Given duration is longer than a day", exception.getMessage());
     }
 
 }
